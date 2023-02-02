@@ -1,0 +1,320 @@
+#include<fstream>
+#include<string.h>
+#include<iomanip>
+#include<iostream>
+using namespace std;
+
+class product
+{
+	int product_number;
+	char product_name[50];
+	float product_price,product_quantity,product_discount;
+
+	public:
+
+	void create_product()
+	{
+		cout<<endl<<"Please Enter The Product Number: ";
+		cin>>product_number;
+		cout<<endl<<"Please Enter The Name of The Product: ";
+		cin.ignore();
+		cin.getline(product_name ,50);
+		cout<<endl<<"Please Enter The Price of The Product: ";
+		cin>>product_price;
+		cout<<endl<<"Please Enter The Discount (%): ";
+		cin>>product_discount;
+	}
+
+	void show_product()
+	{
+		cout<<endl<<"Product Number: "<<product_number;
+		cout<<endl<<"Product Name: "<<product_name;
+		cout<<endl<<"Product Price: "<<product_price;
+		cout<<endl<<"Discount : "<<product_discount;
+	}
+
+	int getProduct()
+	{
+		return product_number;
+	}
+
+	float getPrice()
+	{
+		return product_price;
+	}
+
+	char* getName()
+	{
+		return product_name;
+	}
+
+	float getDiscount()
+	{
+		return product_discount;
+	}
+};
+
+
+
+fstream fp;
+product produc;
+
+
+void save_product()
+{
+	ofstream fp;
+	fp.open("database.dat",ios::binary|ios::app);
+	produc.create_product();
+	fp.write((char*)&produc,sizeof(produc));
+	fp.close();
+	cout<<endl<<endl<<"The Product Has Been Successfully Created..."<<endl;
+	getchar();
+}
+
+
+void show_all_product()
+{
+	ifstream fp;
+	cout<<endl<<"\t\t/***/";
+	cout<<endl<<"\t\t   RECORDS";
+	cout<<endl<<"\t\t/***/\n";
+	fp.open("database.dat",ios::binary);
+	while(fp.read((char*)&produc,sizeof(produc)))
+	{
+		produc.show_product();
+		cout<<endl<<"****\n"<<endl;
+		//getchar();
+	}
+	fp.close();
+}
+
+
+void display_record(int num)
+{
+	ifstream fp;
+	bool found=false;
+	fp.open("database.dat",ios::binary);
+	while(fp.read((char*)&produc,sizeof(produc)))
+	{
+		if(produc.getProduct()==num)
+		{
+			produc.show_product();
+			found=true;
+		}
+	}
+
+	fp.close();
+	if(found == false)
+		cout<<"\n\nNo record found";
+	getchar();
+}
+
+
+
+void edit_product()
+{
+	int num;
+	bool found=false;
+	cout<<endl<<endl<<"\tPlease Enter The Product Number: ";
+	cin>>num;
+
+	fp.open("database.dat",ios::in|ios::out);
+	while(fp.read((char*)&produc,sizeof(product)) && found==false)
+	{
+		if(produc.getProduct()==num)
+		{
+			produc.show_product();
+			cout<<"\nPlease Enter The New Details of Product: "<<endl;
+			produc.create_product();
+			long long unsigned int pos= -1 * sizeof(produc);
+			fp.seekp(pos,ios::cur);
+			fp.write((char*)&produc,sizeof(produc));
+			cout<<endl<<endl<<"\t Record Successfully Updated...";
+			found=true;
+		}
+	}
+	fp.close();
+	if(found==false)
+		cout<<endl<<endl<<"Record Not Found...";
+	getchar();
+}
+
+
+void delete_product()
+{
+	ifstream fp;
+	int num;
+	cout<<endl<<endl<<"Please Enter The Product Number: ";
+	cin>>num;
+	fp.open("database.dat",ios::binary);
+	ofstream fp2;
+	fp2.open("Temp.dat",ios::out|ios::binary);
+	while(fp.read((char*)&produc,sizeof(produc)))
+	{
+		if(produc.getProduct()!=num)
+		{
+			fp2.write((char*)&produc,sizeof(produc));
+		}
+	}
+	fp2.close();
+	fp.close();
+	remove("database.dat");
+	rename("Temp.dat","database.dat");
+	cout<<endl<<endl<<"\tRecord Deleted...";
+	getchar();
+}
+
+
+void product_menu()
+{
+	fp.open("database.dat",ios::in);
+
+	cout<<endl<<endl<<"\t\tPRODUCT MENU\n\n";
+	cout<<"******"<<endl;
+	cout<<"P.NO.\t\tNAME\t\tPRICE"<<endl;
+	cout<<"******\n";
+	while(fp.read((char*)&produc,sizeof(produc)))
+	{
+		cout<<produc.getProduct()<<"\t\t"<<produc.getName()<<"\t\t"<<produc.getPrice()<<endl;
+	}
+	fp.close();
+}
+
+
+
+void place_order()
+{
+	int order_arr[50],quan[50],c=0;
+	float amt,damt,total=0;
+	char ch;
+	product_menu();
+	cout<<"\n********";
+	cout<<"\n          PLACE YOUR ORDER";
+	cout<<"\n********\n";
+	do{
+		cout<<"\n\nEnter The Product Number: ";
+		cin>>order_arr[c];
+		cout<<"\nQuantity: ";
+		cin>>quan[c];
+		c++;
+		cout<<"\nDo You Want To Order Another Product ? (y/n)";
+		cin>>ch;
+		}while(ch=='y' ||ch=='Y');
+	cout<<endl;
+	cout<<"\nThank You...";
+	cout<<"\n\n****INVOICE****\n";
+	cout<<"\nPr No.\tPr Name\tQuantity \tPrice \tAmount \tAmount after discount"<<endl;
+	for(int x=0;x<=c;x++)
+	{
+		fp.open("database.dat",ios::in);
+		fp.read((char*)&produc,sizeof(produc));
+		while(!fp.eof())
+		{
+			if(produc.getProduct()==order_arr[x])
+			{
+				amt=produc.getPrice()*quan[x];
+				damt=amt-(amt*produc.getDiscount()/100);
+				cout<<"\n"<<order_arr[x]<<"\t"<<produc.getName()<<"\t"<<quan[x]<<"\t\t"<<produc.getPrice()<<"\t"<<amt<<"\t\t"<<damt;
+				total+=damt;
+			}
+			fp.read((char*)&produc,sizeof(produc));
+		}
+		fp.close();
+	}
+	cout<<"\n\n\t\t\t\t\tTOTAL = "<<total;
+	getchar();
+}
+
+void intro()
+{
+    cout<<endl<<endl<<"   "<<"/*****/";
+    cout<<endl<<"      "<<"       MIT-WPU       ";
+    cout<<endl<<"************";
+    cout <<endl<<endl <<"\tSUPERMARKET BILLING SYSTEM"<<endl<<endl;
+    cout<<"\t\t"<<"PROJECT BY :- "<<endl<<endl;
+    cout<<"\t"<<"YASH MUNDADA (PA31)"<<endl;
+    cout<<"\t"<<"PIYUSH PAMNANI (PA35)"<<endl;
+    cout<<"\t"<<"RUCHIN SHROFF (PA36)"<<endl;
+    cout<<endl<<"   "<<"/*****/";
+}
+
+
+
+void admin_menu()
+{
+	int option;
+	cout<<"\t";
+	cout<<"        "<<"ADMIN MENU"<<endl;
+	cout<<"\n\tPress 1 to CREATE PRODUCT";
+	cout<<"\n\tPress 2 to DISPLAY ALL PRODUCTS";
+	cout<<"\n\tPress 3 to VIEW PRODUCT";
+	cout<<"\n\tPress 4 to MODIFY PRODUCT";
+	cout<<"\n\tPress 5 to DELETE PRODUCT";
+	cout<<"\t"<<endl;
+
+	cout<<"\n\n\tOption: ";
+	cin>>option;
+	switch(option)
+	{
+		case 1: save_product();
+				break;
+
+		case 2: show_all_product();
+				break;
+
+		case 3:
+				int num;
+				cout<<"\n\n\tPlease Enter The Product Number: ";
+				cin>>num;
+				display_record(num);
+				break;
+
+		case 4: edit_product();
+                break;
+
+		case 5: delete_product();
+		        break;
+
+		default:admin_menu();
+	}
+}
+
+
+int main()
+{
+
+	int option;
+	intro();
+
+	do
+	{
+		cout<<endl;
+		cout<<"\n\t"<<"/***/";
+		cout<<"\n\t"<<"       "<<"MAIN MENU";
+		cout<<"\n\t"<<"/***/";
+		cout<<"\n\t"<<"   ";
+		cout<<"\n\t"<<"     "<<"1.CUSTOMER";
+		cout<<"\n\t"<<"     "<<"2.ADMINISTRATOR";
+		cout<<"\n\t"<<"     "<<"3.EXIT";
+		cout<<"\n\t";
+
+		cout<<"\n\tOPTION: ";
+		cin>>option;
+
+		switch(option)
+		{
+			case 1: place_order();
+					break;
+
+			case 2: admin_menu();
+					break;
+
+			case 3: cout<<"\n\t*******";
+					cout<<"\n\t          THANK YOU FOR VISITING!";
+					cout<<"\n\t*******\n";
+					break;
+			default :cout<<"Invalid Input...\n";
+		}
+
+	}while(option!=3);
+}
